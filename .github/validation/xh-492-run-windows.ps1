@@ -39,7 +39,7 @@ if (Test-Path 'target/debug/xh.exe') {
 if ($testExit -ne 0) { throw "Native Windows matrix failed with exit code $testExit. Retain all evidence." }
 
 $records = @(Get-ChildItem $EvidenceDir -Filter '*.json')
-if ($records.Count -ne 177) { throw "Expected 177 JSON records, got $($records.Count); matrix is incomplete." }
+if ($records.Count -ne 225) { throw "Expected 225 JSON records, got $($records.Count); matrix is incomplete." }
 $checks = 0
 foreach ($file in $records) {
     $record = Get-Content -Raw $file.FullName | ConvertFrom-Json
@@ -53,6 +53,6 @@ foreach ($file in $records) {
         $checks++
     }
 }
-if ($checks -ne 170) { throw "Expected 170 exact comparisons, got $checks." }
-"PASS: native Windows matrix; 84 argv cases, 84 single-request bodies, 2 negative controls; 177 JSON records." |
+if ($checks -ne 218) { throw "Expected 218 exact comparisons, got $checks." }
+"PASS: native Windows matrix; 108 argv cases, 108 single-request bodies, 2 negative controls; 225 JSON records." |
     Tee-Object -FilePath (Join-Path $EvidenceDir 'verification.txt')

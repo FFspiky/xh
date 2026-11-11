@@ -30,7 +30,7 @@ jobs:
       - name: Run library and CLI regressions on Windows
         shell: pwsh
         run: |
-          cargo test --locked --no-default-features --features rustls --lib --test cli 2>&1 | Tee-Object -FilePath xh-492-windows-evidence/regular-tests.log
+          cargo test --locked --no-default-features --features rustls --bin xh --test cli 2>&1 | Tee-Object -FilePath xh-492-windows-evidence/regular-tests.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         if: always()
