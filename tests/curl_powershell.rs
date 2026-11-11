@@ -114,6 +114,8 @@ fn capture_requests(listener: TcpListener, done: Arc<AtomicBool>) -> Vec<Vec<u8>
     loop {
         match listener.accept() {
             Ok((mut stream, _)) => {
+                // Windows can inherit the listener's nonblocking mode.
+                stream.set_nonblocking(false).unwrap();
                 stream
                     .set_read_timeout(Some(Duration::from_secs(5)))
                     .unwrap();
@@ -217,6 +219,14 @@ fn native_powershell_argument_and_request_bytes() {
         ("space-three-trailing-backslashes", r"two words\\\"),
         ("quote-space-trailing-backslash", r#"a"b c\"#),
         ("mixed-space-trailing-backslash", r#"it's "quoted" \"#),
+        (
+            "escaped-quote-space-trailing-backslash",
+            r#"one\"two words\"#,
+        ),
+        (
+            "escaped-quote-run-space-trailing-backslash",
+            r#"one\\"two words\\"#,
+        ),
         ("empty", ""),
         ("spaces", " two  words "),
         ("unicode", "你好 café 🦀"),
