@@ -56,7 +56,7 @@ fn powershell(executable: &str, mode: &str, script: &str, dir: &Path) -> Command
     let script = format!(
         "$ErrorActionPreference = 'Stop'\n{guard}\n\
          $PSNativeCommandArgumentPassing = '{mode}'\n\
-         Set-Alias curl Invoke-WebRequest\n\
+         Set-Alias curl Invoke-WebRequest -Option AllScope\n\
          {script}\n\
          if ($LASTEXITCODE -ne 0) {{ throw \"curl exited with $LASTEXITCODE\" }}\n"
     );
