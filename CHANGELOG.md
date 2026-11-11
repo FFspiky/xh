@@ -1,3 +1,9 @@
+## [Unreleased]
+### Features
+- Add `--curl-shell` to select bash, modern PowerShell, or legacy PowerShell
+  quoting. The default quoting is unchanged; Windows output now uses `curl.exe`
+  to avoid the Windows PowerShell alias and explains how to select modern quoting.
+
 ## [0.26.3] - 2026-10-21
 ### Security fixes
 - Upgrade rustls-webpki to v0.103.16 and webpki-root-certs to v1.0.10
