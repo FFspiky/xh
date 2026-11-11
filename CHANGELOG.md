@@ -1,8 +1,9 @@
 ## [Unreleased]
 ### Features
 - Add `--curl-shell` to select bash, modern PowerShell, or legacy PowerShell
-  quoting. The default quoting is unchanged; Windows output now uses `curl.exe`
+  quoting. The default quoting mode is unchanged; Windows output now uses `curl.exe`
   to avoid the Windows PowerShell alias and explains how to select modern quoting.
+  Legacy quoting also preserves trailing backslashes in arguments containing spaces.
 
 ## [0.26.3] - 2026-10-21
 ### Security fixes

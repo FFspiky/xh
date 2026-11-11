@@ -76,13 +76,41 @@ impl Command {
 }
 
 impl CurlShell {
-    fn quote(self, text: &str) -> Quoted<'_> {
+    fn quote(self, text: &str) -> String {
+        if self == Self::PowershellLegacy
+            && text.ends_with('\\')
+            && text.contains(char::is_whitespace)
+        {
+            // Supply the native quotes explicitly: Windows PowerShell can add
+            // closing quotes without escaping a preceding trailing backslash.
+            // Quote once for the Windows argv parser, then for PowerShell.
+            let mut native = String::from("\"");
+            let mut backslashes = 0;
+            for ch in text.chars() {
+                if ch == '\\' {
+                    backslashes += 1;
+                    continue;
+                }
+                let count = if ch == '"' {
+                    2 * backslashes + 1
+                } else {
+                    backslashes
+                };
+                native.extend(std::iter::repeat_n('\\', count));
+                native.push(ch);
+                backslashes = 0;
+            }
+            native.extend(std::iter::repeat_n('\\', 2 * backslashes));
+            native.push('"');
+            return Quoted::windows(&native).force(false).to_string();
+        }
         match self {
             Self::Bash => Quoted::unix(text),
             Self::Powershell => Quoted::windows(text),
             Self::PowershellLegacy => Quoted::windows(text).external(true),
         }
         .force(false)
+        .to_string()
     }
 }
 
@@ -111,6 +139,8 @@ impl std::fmt::Display for Command {
                 // Explicit shell selection is validated by translate(). The default
                 // continues to support native strings with non-Unicode filenames.
                 write!(f, " {}", shell.quote(arg.to_str().ok_or(std::fmt::Error)?))?;
+            } else if let (true, Some(arg)) = (cfg!(windows), arg.to_str()) {
+                write!(f, " {}", CurlShell::PowershellLegacy.quote(arg))?;
             } else {
                 write!(f, " {}", arg.maybe_quote().external(true))?;
             }
@@ -572,7 +602,7 @@ mod tests {
             (r#"a"b"#, r#"'a"b'"#, r#"'a\"b'"#),
             (r#"a\"b"#, r#"'a\"b'"#, r#"'a\\\"b'"#),
             (r"a\b", r"a\b", r"a\b"),
-            (r"two words\", r"'two words\'", r"'two words\'"),
+            (r"two words\", r"'two words\'", r#"'"two words\\"'"#),
             ("你好 café 🦀", "'你好 café 🦀'", "'你好 café 🦀'"),
             (
                 r#"it's "quoted""#,
