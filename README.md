@@ -232,6 +232,9 @@ platform. Each selection implies `--curl` and can be combined with `--curl-long`
 The quoting must match the shell where the printed command will be run; xh cannot
 read the calling PowerShell session's argument-passing preference.
 
+Legacy output may use a PowerShell version check inside an argument to preserve
+combinations of spaces, quotes, and backslashes. It still invokes curl only once.
+
 Explicit shell selection requires Unicode arguments. Per-protocol proxy options
 (`--proxy http:...` and `--proxy https:...`) are not supported with explicit
 PowerShell output; `--proxy all:...` is supported.

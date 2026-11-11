@@ -78,31 +78,21 @@ impl Command {
 impl CurlShell {
     fn quote(self, text: &str) -> String {
         if self == Self::PowershellLegacy
-            && text.ends_with('\\')
             && text.contains(char::is_whitespace)
+            && (text.ends_with('\\') || text.contains('"'))
         {
-            // Supply the native quotes explicitly: Windows PowerShell can add
-            // closing quotes without escaping a preceding trailing backslash.
-            // Quote once for the Windows argv parser, then for PowerShell.
-            let mut native = String::from("\"");
-            let mut backslashes = 0;
-            for ch in text.chars() {
-                if ch == '\\' {
-                    backslashes += 1;
-                    continue;
-                }
-                let count = if ch == '"' {
-                    2 * backslashes + 1
-                } else {
-                    backslashes
-                };
-                native.extend(std::iter::repeat_n('\\', count));
-                native.push(ch);
-                backslashes = 0;
+            // Windows PowerShell and PowerShell Core count escaped quotes
+            // differently when deciding whether to add native argument quotes.
+            let core = legacy_native_argument(text, false);
+            let windows = legacy_native_argument(text, true);
+            if core == windows {
+                return Quoted::windows(&core).force(false).to_string();
             }
-            native.extend(std::iter::repeat_n('\\', 2 * backslashes));
-            native.push('"');
-            return Quoted::windows(&native).force(false).to_string();
+            return format!(
+                "$(if ($PSVersionTable.PSVersion.Major -eq 5) {{ {} }} else {{ {} }})",
+                Quoted::windows(&windows).force(false),
+                Quoted::windows(&core).force(false),
+            );
         }
         match self {
             Self::Bash => Quoted::unix(text),
@@ -112,6 +102,30 @@ impl CurlShell {
         .force(false)
         .to_string()
     }
+}
+
+// Both encodings supply complete native quotes, so the matching legacy binder
+// does not add a second pair. PowerShell quoting is applied by the caller.
+fn legacy_native_argument(text: &str, double_quotes: bool) -> String {
+    let mut native = String::from("\"");
+    let mut backslashes = 0;
+    for ch in text.chars() {
+        if ch == '\\' {
+            backslashes += 1;
+            continue;
+        }
+        if ch == '"' {
+            native.extend(std::iter::repeat_n('\\', 2 * backslashes));
+            native.push(if double_quotes { '"' } else { '\\' });
+        } else {
+            native.extend(std::iter::repeat_n('\\', backslashes));
+        }
+        native.push(ch);
+        backslashes = 0;
+    }
+    native.extend(std::iter::repeat_n('\\', 2 * backslashes));
+    native.push('"');
+    native
 }
 
 impl std::fmt::Display for Command {
@@ -607,7 +621,12 @@ mod tests {
             (
                 r#"it's "quoted""#,
                 r#"'it''s "quoted"'"#,
-                r#"'it''s \"quoted\"'"#,
+                r#"$(if ($PSVersionTable.PSVersion.Major -eq 5) { '"it''s ""quoted"""' } else { '"it''s \"quoted\""' })"#,
+            ),
+            (
+                r#"one\"two words\"#,
+                r#"'one\"two words\'"#,
+                r#"$(if ($PSVersionTable.PSVersion.Major -eq 5) { '"one\\""two words\\"' } else { '"one\\\"two words\\"' })"#,
             ),
         ] {
             assert_eq!(CurlShell::Powershell.quote(input).to_string(), modern);
