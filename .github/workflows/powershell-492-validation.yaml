@@ -1,0 +1,41 @@
+name: PowerShell 492 native validation
+
+on:
+  push:
+    branches: [validate/powershell-492]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      NO_PROXY: '127.0.0.1,localhost,::1,example.com'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install reviewed Rust toolchain
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.97.1 --profile minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup default 1.97.1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify native argument and HTTP body bytes
+        shell: pwsh
+        run: ./.github/validation/xh-492-run-windows.ps1
+      - name: Run library and CLI regressions on Windows
+        shell: pwsh
+        run: |
+          cargo test --locked --no-default-features --features rustls --lib --test cli 2>&1 | Tee-Object -FilePath xh-492-windows-evidence/regular-tests.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: xh-492-windows-evidence
+          path: xh-492-windows-evidence/
+          if-no-files-found: warn
+          retention-days: 14
